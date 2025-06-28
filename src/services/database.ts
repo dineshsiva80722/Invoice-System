@@ -4,12 +4,6 @@ interface DatabaseConfig {
   apiUrl: string;
 }
 
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
-
 class DatabaseService {
   private config: DatabaseConfig;
   private isConnected: boolean = false;
@@ -66,31 +60,155 @@ class DatabaseService {
   private async fetchWithRetry<T>(url: string, options: RequestInit = {}): Promise<T> {
     const maxRetries = 3;
     let retries = 0;
+    let lastError: Error | null = null;
 
     while (retries < maxRetries) {
       try {
-        const response = await fetch(url, options);
+        console.log(`[${new Date().toISOString()}] Attempting request to ${url} (attempt ${retries + 1}/${maxRetries})`);
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            ...(options.headers || {})
+          }
+        });
+
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        const isJson = contentType?.includes('application/json');
+        
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || `HTTP error! status: ${response.status} - ${response.statusText}`);
+          let errorMessage = `HTTP error! status: ${response.status} - ${response.statusText}`;
+          
+          try {
+            // Try to get error message from response
+            const errorData = isJson ? await response.json() : await response.text();
+            if (isJson && errorData?.error) {
+              errorMessage = errorData.error;
+            } else if (!isJson) {
+              // If not JSON, include the first 200 chars of the response
+              const responseText = typeof errorData === 'string' ? errorData : JSON.stringify(errorData);
+              errorMessage = `Expected JSON but got: ${responseText.substring(0, 200)}${responseText.length > 200 ? '...' : ''}`;
+            }
+          } catch (e) {
+            console.error('Error parsing error response:', e);
+          }
+          
+          throw new Error(errorMessage);
         }
         
-        const data = await response.json();
-        if (!data.success) {
-          throw new Error(data.error || 'API request failed');
+        // If successful, parse response
+        try {
+          const data = isJson ? await response.json() : await response.text();
+          
+          if (isJson && data && typeof data === 'object' && 'success' in data) {
+            if (!data.success) {
+              throw new Error(data.error || 'API request failed');
+            }
+            return data.data;
+          }
+          
+          // If we get here, the response doesn't match our expected format
+          return data as T;
+        } catch (e) {
+          console.error('Error parsing response:', e);
+          throw new Error('Failed to parse server response');
         }
-        
-        return data.data;
       } catch (error) {
         retries++;
+        lastError = error instanceof Error ? error : new Error(String(error));
+        
         if (retries >= maxRetries) {
-          console.error(`Failed to fetch ${url} after ${maxRetries} retries:`, error);
-          throw new Error(`Failed to complete request after ${maxRetries} retries: ${error.message}`);
+          console.error(`Failed to fetch ${url} after ${maxRetries} retries:`, lastError);
+          throw new Error(`Failed to complete request after ${maxRetries} retries: ${lastError.message}`);
         }
-        await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+        
+        // Exponential backoff
+        const delay = 1000 * Math.pow(2, retries);
+        console.log(`Request failed, retrying in ${delay}ms...`, error);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
-    throw new Error('Max retries exceeded');
+    
+    throw lastError || new Error('Max retries exceeded');
+  }
+
+  // SETTINGS
+  async getSettings() {
+    try {
+      const stored = localStorage.getItem('invoicepro_settings');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+      return null;
+    }
+  }
+
+  async saveSettings(settings: any) {
+    try {
+      localStorage.setItem('invoicepro_settings', JSON.stringify(settings));
+      return true;
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      return false;
+    }
+  }
+
+  // DASHBOARD STATS
+  async getDashboardStats() {
+    try {
+      // Fetch all necessary data
+      const [invoices, clients] = await Promise.all([
+        this.getInvoices(),
+        this.getClients()
+      ]);
+
+      // Calculate statistics
+      const totalInvoices = invoices.length;
+      const paidInvoices = invoices.filter(inv => inv.status === 'paid').length;
+      const pendingInvoices = invoices.filter(inv => inv.status === 'sent').length;
+      const overdueInvoices = invoices.filter(inv => inv.status === 'overdue').length;
+      
+      const totalRevenue = invoices
+        .filter(inv => inv.status === 'paid')
+        .reduce((sum, inv) => sum + (inv.total || 0), 0);
+        
+      const outstandingAmount = invoices
+        .filter(inv => ['sent', 'overdue'].includes(inv.status))
+        .reduce((sum, inv) => sum + (inv.total || 0), 0);
+        
+      const overdueAmount = invoices
+        .filter(inv => inv.status === 'overdue')
+        .reduce((sum, inv) => sum + (inv.total || 0), 0);
+
+      return {
+        totalRevenue,
+        outstandingAmount,
+        overdueAmount,
+        totalInvoices,
+        paidInvoices,
+        pendingInvoices,
+        overdueInvoices,
+        totalClients: clients.length
+      };
+    } catch (error) {
+      console.error('Failed to get dashboard stats:', error);
+      // Return default values in case of error
+      return {
+        totalRevenue: 0,
+        outstandingAmount: 0,
+        overdueAmount: 0,
+        totalInvoices: 0,
+        paidInvoices: 0,
+        pendingInvoices: 0,
+        overdueInvoices: 0,
+        totalClients: 0
+      };
+    }
   }
 
   // CLIENT CRUD OPERATIONS
@@ -199,7 +317,14 @@ class DatabaseService {
   }
 
   async updateInvoice(id: string, updates: Partial<Invoice>): Promise<Invoice> {
+    if (!id) {
+      throw new Error('Invoice ID is required for update');
+    }
+    
+    console.log(`Attempting to update invoice ${id} with:`, updates);
+    
     try {
+      // Try to update the invoice directly
       const response = await this.fetchWithRetry<Invoice>(`${this.config.apiUrl}/invoices/${id}`, {
         method: 'PATCH',
         headers: {
@@ -207,21 +332,64 @@ class DatabaseService {
         },
         body: JSON.stringify(updates)
       });
+      console.log(`Successfully updated invoice ${id}`);
       return response;
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+        console.error(`Invoice with ID ${id} not found`);
+        throw new Error(`Cannot update: Invoice with ID ${id} does not exist`);
+      }
       console.error('Failed to update invoice:', error);
       throw error;
     }
   }
 
   async deleteInvoice(invoiceId: string): Promise<boolean> {
+    if (!invoiceId) {
+      console.error('Cannot delete invoice: No ID provided');
+      return false;
+    }
+
     try {
-      const response = await this.fetchWithRetry<boolean>(`${this.config.apiUrl}/invoices/${invoiceId}`, {
-        method: 'DELETE'
+      const response = await fetch(`${this.config.apiUrl}/invoices/${invoiceId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
-      return response;
+
+      // Handle non-2xx responses
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to delete invoice:', response.status, response.statusText, errorData);
+        return false;
+      }
+
+      // Try to parse the response as JSON
+      try {
+        const data = await response.json();
+        // Handle case where the API returns a success boolean directly
+        if (typeof data === 'boolean') {
+          return data;
+        }
+        // Handle case where the API returns an ApiResponse object
+        if (data && typeof data === 'object' && 'success' in data) {
+          return data.success === true;
+        }
+        // If we get here, the response format is unexpected
+        console.warn('Unexpected response format from delete endpoint:', data);
+        return true; // Assume success if we got a 2xx response but can't parse it
+      } catch (e) {
+        // If we can't parse JSON, but got a 2xx response, assume success
+        console.log('No JSON response, assuming successful deletion');
+        return true;
+      }
     } catch (error) {
-      console.error('Failed to delete invoice:', error);
+      console.error('Error in deleteInvoice:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+      }
       return false;
     }
   }

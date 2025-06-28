@@ -6,13 +6,7 @@ import { simpleEmailService, EmailData } from '../../services/simpleEmailService
 interface SimpleEmailModalProps {
   invoice: Invoice;
   onClose: () => void;
-  onSend: (emailData: { 
-    to: string; 
-    subject: string; 
-    message: string; 
-    copyMe: boolean;
-    invoiceId?: string | number;
-  }) => void;
+  onSend: (emailData: { to: string; subject: string; message: string; copyMe: boolean }) => void;
 }
 
 export default function SimpleEmailModal({ invoice, onClose, onSend }: SimpleEmailModalProps) {
@@ -47,44 +41,30 @@ export default function SimpleEmailModal({ invoice, onClose, onSend }: SimpleEma
     }
 
     try {
-      // Ensure we have a valid invoice ID
-      if (!invoice?.id && !invoice?.number) {
-        throw new Error('No valid invoice ID or number found');
-      }
-
       // Pass invoice for PDF generation
-      const response = await simpleEmailService.sendInvoiceEmail(
-        emailData, 
-        invoice.number || `INV-${Date.now()}`,
-        invoice
-      );
+      const response = await simpleEmailService.sendInvoiceEmail(emailData, invoice.number, invoice);
       
       if (response.success) {
         setStatus({
           type: 'success',
-          message: `✅ Email prepared successfully! The invoice PDF has been downloaded.`
+          message: `✅ Email client opened! Email will be sent FROM: ${serviceStatus.companyEmail} TO: ${emailData.to} (Client). Invoice PDF downloaded automatically.`
         });
         
-        setEmailLogs(simpleEmailService.getEmailLogsByInvoice(invoice.number || invoice.id));
+        setEmailLogs(simpleEmailService.getEmailLogsByInvoice(invoice.number));
         
-        // Call onSend with the invoice data
         setTimeout(() => {
-          onSend({
-            ...emailData,
-            invoiceId: invoice.id || invoice.number
-          });
-        }, 1000);
+          onSend(emailData);
+        }, 2000);
       } else {
         setStatus({
           type: 'error',
-          message: `❌ Failed to prepare email: ${response.error}`
+          message: `❌ Failed to open email client: ${response.error}`
         });
       }
     } catch (error) {
-      console.error('Error in handleOpenEmailClient:', error);
       setStatus({
         type: 'error',
-        message: 'An error occurred while preparing the email. Please try again.'
+        message: 'An error occurred while preparing the email'
       });
     }
   };

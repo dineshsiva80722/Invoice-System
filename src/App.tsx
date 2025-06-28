@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Layout/Header';
 import Dashboard from './components/Dashboard/Dashboard';
-import InvoiceList from './components/Invoices/InvoiceList';
+import InvoiceList from './components/Invoices234/InvoiceList';
 import ClientList from './components/Clients/ClientList';
 import ProductList from './components/Products/ProductList';
 import InvoiceSettings from './components/Settings/InvoiceSettings';
