@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Save, Send } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Plus, Trash2, Save, Send, Eye } from 'lucide-react';
 import { Client, Product, Invoice, InvoiceItem } from '../../types';
 import { databaseService } from '../../services/database';
 import { format, addDays } from 'date-fns';
@@ -42,90 +42,33 @@ export default function InvoiceForm({ onClose, onSave, invoice }: InvoiceFormPro
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Load clients and products from database
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [clientsData, productsData] = await Promise.all([
-        databaseService.getClients(),
-        databaseService.getProducts()
-      ]);
-      setClients(clientsData || []);
-      setProducts(productsData || []);
-      console.log(`📋 Loaded ${clientsData?.length || 0} clients and ${productsData?.length || 0} products`);
-    } catch (error) {
-      console.error('Failed to load clients and products:', error);
-      setClients([]);
-      setProducts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Initial load
   useEffect(() => {
-    loadData();
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [clientsData, productsData] = await Promise.all([
+          databaseService.getClients(),
+          databaseService.getProducts()
+        ]);
+        
+        setClients(clientsData);
+        setProducts(productsData);
 
-    // Set up a listener for client updates
-    const handleClientUpdate = () => {
-      loadData();
-    };
-
-    // Listen for custom event when a new client is added
-    window.addEventListener('clientUpdated', handleClientUpdate);
-    
-    // Clean up the event listener
-    return () => {
-      window.removeEventListener('clientUpdated', handleClientUpdate);
-    };
-  }, []);
-
-  // Load selected client data
-  useEffect(() => {
-    console.log('useEffect - clients or invoice changed', { 
-      clientsCount: clients?.length, 
-      invoiceId: invoice?.id, 
-      currentClientId: formData.clientId 
-    });
-
-    if (invoice?.clientId && clients.length > 0) {
-      console.log('Setting client from invoice:', invoice.clientId);
-      const client = clients.find(c => c.id === invoice.clientId);
-      if (client) {
-        console.log('Found client in clients list:', client);
-        setSelectedClient(client);
-        setFormData(prev => {
-          console.log('Updating formData with clientId:', client.id);
-          return { ...prev, clientId: client.id };
-        });
-      } else {
-        console.warn('Client not found in clients list for invoice.clientId:', invoice.clientId);
+        // Set selected client if editing
+        if (invoice && clientsData.length > 0) {
+          const client = clientsData.find(c => c.id === invoice.clientId);
+          setSelectedClient(client || null);
+        }
+      } catch (error) {
+        console.error('Failed to load data:', error);
+        setErrors({ general: 'Failed to load clients and products. Please try again.' });
+      } finally {
+        setLoading(false);
       }
-    } else if (clients.length > 0 && !formData.clientId) {
-      console.log('Auto-selecting first client:', clients[0].id);
-      setFormData(prev => {
-        console.log('Setting initial clientId in formData:', clients[0].id);
-        return { ...prev, clientId: clients[0].id };
-      });
-      setSelectedClient(clients[0]);
-    } else {
-      console.log('No action taken in client selection effect', { 
-        hasInvoiceClientId: !!invoice?.clientId, 
-        hasClients: clients.length > 0,
-        hasFormClientId: !!formData.clientId
-      });
-    }
-  }, [clients, invoice]);
+    };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="flex items-center space-x-3">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="text-gray-600">Loading data...</span>
-        </div>
-      </div>
-    );
-  }
+    loadData();
+  }, [invoice]);
 
   const addItem = () => {
     setItems([
@@ -228,17 +171,16 @@ export default function InvoiceForm({ onClose, onSave, invoice }: InvoiceFormPro
     }
   };
 
-  // Generate client options with proper ID mapping
-  const clientOptions = (clients || []).map(client => {
-    const displayText = `${client.company || client.name} (${client.email})`;
-    // Use _id for MongoDB documents if available, fallback to id
-    const clientId = client._id || client.id;
+  if (loading) {
     return (
-      <option key={clientId} value={clientId}>
-        {displayText}
-      </option>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl p-8 flex items-center space-x-3">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <span className="text-gray-700">Loading clients and products...</span>
+        </div>
+      </div>
     );
-  });
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -291,42 +233,13 @@ export default function InvoiceForm({ onClose, onSave, invoice }: InvoiceFormPro
                     Client *
                   </label>
                   <select
-                    value={formData.clientId || ''}
-                    key={`client-select-${clients.length}`} // Force re-render when clients change
+                    value={formData.clientId}
                     onChange={(e) => {
-                      const clientId = e.target.value;
-                      console.log('Client selection changed. Selected clientId:', clientId);
-                      
-                      if (!clientId) {
-                        console.log('No client selected');
-                        setFormData(prev => ({
-                          ...prev,
-                          clientId: ''
-                        }));
-                        setSelectedClient(null);
-                        return;
-                      }
-                      
-                      // Find the selected client by either _id or id
-                      const client = clients.find(c => (c._id === clientId) || (c.id === clientId));
-                      
-                      if (client) {
-                        console.log('Selected client:', client);
-                        setFormData(prev => ({
-                          ...prev,
-                          clientId: client.id
-                        }));
-                        setSelectedClient(client);
-                        
-                        if (errors.client) {
-                          setErrors(prev => ({
-                            ...prev,
-                            client: ''
-                          }));
-                        }
-                      } else {
-                        console.error('Selected client not found in clients list. clientId:', clientId);
-                        console.log('Available clients:', clients);
+                      const client = clients.find(c => c.id === e.target.value);
+                      setFormData({ ...formData, clientId: e.target.value });
+                      setSelectedClient(client || null);
+                      if (errors.client) {
+                        setErrors({ ...errors, client: '' });
                       }
                     }}
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
@@ -335,7 +248,11 @@ export default function InvoiceForm({ onClose, onSave, invoice }: InvoiceFormPro
                     required
                   >
                     <option value="">Select a client</option>
-                    {clientOptions}
+                    {clients.map(client => (
+                      <option key={client.id} value={client.id}>
+                        {client.company || client.name} ({client.email})
+                      </option>
+                    ))}
                   </select>
                   {errors.client && <p className="text-red-500 text-sm mt-1">{errors.client}</p>}
                   {clients.length === 0 && (
@@ -434,7 +351,7 @@ export default function InvoiceForm({ onClose, onSave, invoice }: InvoiceFormPro
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {items.map((item) => (
+                      {items.map((item, index) => (
                         <tr key={item.id}>
                           <td className="py-3 px-4">
                             <div className="space-y-2">

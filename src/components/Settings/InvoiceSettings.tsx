@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Upload, Save, Eye, Palette, FileText, Building, Database, CheckCircle, AlertCircle, Loader, Lock, User, Key, RefreshCw, ExternalLink } from 'lucide-react';
 import { databaseService } from '../../services/database';
 import { authService } from '../../services/authService';
+import { simpleEmailService } from '../../services/simpleEmailService';
 import InvoicePreviewModal from './InvoicePreviewModal';
 
 export default function InvoiceSettings() {
@@ -177,6 +178,9 @@ export default function InvoiceSettings() {
       const success = await databaseService.saveSettings(settings);
       
       if (success) {
+        // Refresh email service with new settings
+        simpleEmailService.refreshCompanySettings();
+        
         setSaveStatus({
           type: 'success',
           message: 'Settings saved successfully!'

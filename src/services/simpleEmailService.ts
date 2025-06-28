@@ -42,6 +42,11 @@ class SimpleEmailService {
     }
   }
 
+  // Call this method after updating company settings
+  public refreshCompanySettings(): void {
+    this.loadCompanySettings();
+  }
+
   private getCompanyEmail(): string {
     return this.companySettings?.companyEmail || 'your-email@company.com';
   }
@@ -305,10 +310,6 @@ Please remit payment by the due date to avoid any late fees. You can pay online 
 If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to contact us.
 
 Thank you for your business!`;
-  }
-
-  refreshCompanySettings(): void {
-    this.loadCompanySettings();
   }
 
   getEmailServiceStatus(): {

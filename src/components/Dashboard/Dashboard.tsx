@@ -1,12 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { DollarSign, FileText, Users, TrendingUp, Loader, RefreshCw } from 'lucide-react';
 import StatsCard from './StatsCard';
 import RevenueChart from './RevenueChart';
 import RecentInvoices from './RecentInvoices';
 import { databaseService } from '../../services/database';
+import { Invoice } from '../../types';
 
 export default function Dashboard() {
-  const [metrics, setMetrics] = useState({
+  interface DashboardMetrics {
+    totalRevenue: number;
+    outstandingAmount: number;
+    overdueAmount: number;
+    totalInvoices: number;
+    paidInvoices: number;
+    pendingInvoices: number;
+    overdueInvoices: number;
+    totalClients: number;
+    totalProducts: number;
+    recentInvoices: Invoice[];
+    monthlyRevenue: Array<{ month: string; amount: number }>;
+  }
+
+  const [metrics, setMetrics] = useState<DashboardMetrics>({
     totalRevenue: 0,
     outstandingAmount: 0,
     overdueAmount: 0,
@@ -47,6 +62,29 @@ export default function Dashboard() {
 
       // Calculate metrics
       const recentInvoices = invoices
+        .map(invoice => ({
+          ...invoice,
+          // Ensure we have all required Invoice fields
+          client: {
+            ...invoice.client,
+            address: invoice.client.address || {
+              street: '',
+              city: '',
+              state: '',
+              zipCode: '',
+              country: ''
+            },
+            paymentTerms: invoice.client.paymentTerms || 30,
+            creditLimit: invoice.client.creditLimit || 0,
+            totalOutstanding: invoice.client.totalOutstanding || 0
+          },
+          items: invoice.items || [],
+          subtotal: invoice.subtotal || 0,
+          tax: invoice.tax || 0,
+          total: invoice.total || 0,
+          notes: invoice.notes || '',
+          terms: invoice.terms || ''
+        }))
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .slice(0, 5);
 

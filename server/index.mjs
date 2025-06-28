@@ -460,6 +460,33 @@ app.delete('/api/invoices/:id', async (req, res) => {
   }
 });
 
+// Update invoice status
+app.patch('/api/invoices/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    if (!status) {
+      return res.status(400).json({ error: 'Status is required' });
+    }
+    
+    const invoicesCollection = db.collection('invoices');
+    const result = await invoicesCollection.updateOne(
+      { id },
+      { $set: { status, updatedAt: new Date() } }
+    );
+    
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to update invoice status:', error);
+    res.status(500).json({ error: 'Failed to update invoice status' });
+  }
+});
+
 // Connection info endpoint
 app.get('/settings/connection', async (req, res) => {
   try {
