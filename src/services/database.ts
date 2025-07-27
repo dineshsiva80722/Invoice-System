@@ -12,7 +12,7 @@ class DatabaseService {
   private constructor() {
     // Use Vite's environment variables
     this.config = {
-      apiUrl: import.meta.env.VITE_API_URL || 'mongodb+srv://dezprox25:catlover6208@cluster0.jbcrgrb.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
+      apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
     };
   }
 
