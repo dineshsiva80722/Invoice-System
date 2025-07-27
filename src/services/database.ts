@@ -14,6 +14,11 @@ class DatabaseService {
     this.config = {
       apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
     };
+    
+    // For Vercel deployment, we need to use relative URLs
+    if (typeof window !== 'undefined' && this.config.apiUrl.startsWith('/')) {
+      this.config.apiUrl = window.location.origin + this.config.apiUrl;
+    }
   }
 
   // Singleton pattern to ensure single instance
