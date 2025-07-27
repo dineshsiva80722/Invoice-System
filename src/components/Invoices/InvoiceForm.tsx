@@ -57,7 +57,13 @@ export default function InvoiceForm({ onClose, onSave, invoice }: InvoiceFormPro
         // Set selected client if editing
         if (invoice && clientsData.length > 0) {
           const client = clientsData.find(c => c.id === invoice.clientId);
-          setSelectedClient(client || null);
+          if (client) {
+            setSelectedClient(client);
+            setFormData(prev => ({
+              ...prev,
+              clientId: client.id
+            }));
+          }
         }
       } catch (error) {
         console.error('Failed to load data:', error);
@@ -235,11 +241,18 @@ export default function InvoiceForm({ onClose, onSave, invoice }: InvoiceFormPro
                   <select
                     value={formData.clientId}
                     onChange={(e) => {
-                      const client = clients.find(c => c.id === e.target.value);
-                      setFormData({ ...formData, clientId: e.target.value });
-                      setSelectedClient(client || null);
+                      const clientId = e.target.value;
+                      const client = clients.find(c => c.id === clientId) || null;
+                      setFormData(prev => ({
+                        ...prev,
+                        clientId: clientId
+                      }));
+                      setSelectedClient(client);
                       if (errors.client) {
-                        setErrors({ ...errors, client: '' });
+                        setErrors(prev => ({
+                          ...prev,
+                          client: ''
+                        }));
                       }
                     }}
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Plus, Search, Edit, Trash2, Mail, Phone, Loader, RefreshCw } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Mail, Phone, Loader, RefreshCw, AlertCircle } from 'lucide-react';
 import { Client } from '../../types';
 import { databaseService } from '../../services/database';
 import ClientForm from './ClientForm';
@@ -12,6 +12,9 @@ export default function ClientList() {
   const [editingClient, setEditingClient] = useState<Client | undefined>();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Load clients from database
   useEffect(() => {
@@ -21,9 +24,17 @@ export default function ClientList() {
   const loadClients = async () => {
     try {
       setLoading(true);
+      console.log('Fetching fresh client list from server...');
       const clientsData = await databaseService.getClients();
-      setClients(clientsData || []); // Ensure we always have an array
-      console.log(`📋 Loaded ${clientsData?.length || 0} clients`);
+      console.log('Received clients data:', clientsData);
+      
+      if (Array.isArray(clientsData)) {
+        setClients(clientsData);
+        console.log(`📋 Loaded ${clientsData.length} clients`);
+      } else {
+        console.error('Invalid clients data received:', clientsData);
+        setClients([]);
+      }
     } catch (error) {
       console.error('Failed to load clients:', error);
       setClients([]); // Set to empty array on error
@@ -53,6 +64,46 @@ export default function ClientList() {
     } catch (error) {
       console.error('Failed to save client:', error);
     }
+  };
+
+  const handleDeleteClick = (client: Client) => {
+    setClientToDelete(client);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!clientToDelete) return;
+    
+    try {
+      setIsDeleting(true);
+      const clientId = clientToDelete._id;  
+      if (!clientId) {
+        console.error('Cannot delete client: No ID found', clientToDelete);
+        return;
+      }
+      
+      console.log('Deleting client with ID:', clientId);
+      const success = await databaseService.deleteClient(clientId);
+      
+      if (success) {
+        await loadClients();
+        // Notify other components that clients have been updated
+        window.dispatchEvent(new Event('clientUpdated'));
+      } else {
+        console.error('Failed to delete client');
+      }
+    } catch (error) {
+      console.error('Error deleting client:', error);
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setClientToDelete(null);
+      setIsDeleting(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setIsDeleteDialogOpen(false);
+    setClientToDelete(null);
   };
 
   const filteredClients = clients && Array.isArray(clients) 
@@ -168,7 +219,10 @@ export default function ClientList() {
                         <Edit className="h-5 w-5" />
                       </button>
                       <button
-                        onClick={() => databaseService.deleteClient(client.id).then(() => loadClients())}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClick(client);
+                        }}
                         className="p-2 text-red-600 hover:text-red-800 transition-colors"
                         title="Delete"
                       >
@@ -210,6 +264,51 @@ export default function ClientList() {
           }}
           onSave={handleSaveClient}
         />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {isDeleteDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 pt-0.5">
+                <AlertCircle className="h-6 w-6 text-red-500" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-medium text-gray-900">Delete Client</h3>
+                <div className="mt-2">
+                  <p className="text-sm text-gray-500">
+                    Are you sure you want to delete <span className="font-semibold">{clientToDelete?.name}</span>? 
+                    This action cannot be undone.
+                  </p>
+                </div>
+                <div className="mt-4 flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={cancelDelete}
+                    disabled={isDeleting}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmDelete}
+                    disabled={isDeleting}
+                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 inline-flex items-center"
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Loader className="mr-2 h-4 w-4 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : 'Delete'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

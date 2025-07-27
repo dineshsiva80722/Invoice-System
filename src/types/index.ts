@@ -31,6 +31,7 @@ export interface Client {
   email: string;
   phone?: string;
   company?: string;
+  role?: string;
   address: {
     street: string;
     city: string;

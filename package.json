@@ -8,8 +8,10 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "node server/index.js",
-    "dev:full": "concurrently \"npm run server\" \"npm run dev\""
+    "server": "cd server && pnpm dev",
+    "dev:frontend": "vite",
+    "dev:backend": "cd server && pnpm dev",
+    "dev:full": "concurrently -n \"FRONTEND,BACKEND\" -c \"bgBlue.bold,bgGreen.bold\" \"npm run dev:frontend\" \"npm run dev:backend\""
   },
   "dependencies": {
     "concurrently": "^8.2.2",

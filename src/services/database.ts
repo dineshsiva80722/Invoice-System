@@ -230,8 +230,27 @@ class DatabaseService {
 
   async getClients(): Promise<Client[]> {
     try {
-      const response = await this.fetchWithRetry<Client[]>(`${this.config.apiUrl}/clients`);
-      return response || [];
+      console.log('Fetching clients from:', `${this.config.apiUrl}/clients`);
+      const response = await fetch(`${this.config.apiUrl}/clients`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('Raw clients response:', result);
+      
+      // Handle different response formats
+      if (Array.isArray(result)) {
+        return result;
+      } else if (result && Array.isArray(result.data)) {
+        return result.data;
+      } else if (result && result.success && Array.isArray(result.data)) {
+        return result.data;
+      }
+      
+      console.error('Unexpected clients response format:', result);
+      return [];
     } catch (error) {
       console.error('Failed to get clients:', error);
       return [];
@@ -240,12 +259,44 @@ class DatabaseService {
 
   async deleteClient(clientId: string): Promise<boolean> {
     try {
-      const response = await this.fetchWithRetry<boolean>(`${this.config.apiUrl}/clients/${clientId}`, {
-        method: 'DELETE'
-      });
-      return response;
+      console.log(`Attempting to delete client with ID: ${clientId}`);
+      
+      const response = await fetch(
+        `${this.config.apiUrl}/clients/${clientId}`, 
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      const result = await response.json();
+      console.log('Delete client response:', result);
+      
+      // Handle different response formats
+      if (result && result.success === true) {
+        console.log('Client deleted successfully');
+        return true;
+      } else if (result && result.success === false) {
+        console.error('Server reported failure:', result.error || 'No error message provided');
+        return false;
+      }
+      
+      // Fallback for different response formats
+      if (response.ok) {
+        console.log('Client deleted successfully (fallback check)');
+        return true;
+      }
+      
+      console.error('Unexpected response format:', result);
+      return false;
+      
     } catch (error) {
       console.error('Failed to delete client:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+      }
       return false;
     }
   }

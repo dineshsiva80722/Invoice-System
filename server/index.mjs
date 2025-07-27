@@ -255,9 +255,19 @@ app.get('/api/test', async (req, res) => {
 app.get('/api/:collection', async (req, res) => {
   try {
     const { collection } = req.params;
-    const data = await db.collection(collection).find({}).toArray();
+    let data = await db.collection(collection).find({}).toArray();
+    
+    // Map MongoDB _id to id for the clients collection
+    if (collection === 'clients') {
+      data = data.map(client => ({
+        ...client,
+        id: client._id.toString()
+      }));
+    }
+    
     res.json({ success: true, data });
   } catch (error) {
+    console.error(`Error getting ${req.params.collection}:`, error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -289,9 +299,23 @@ app.post('/api/:collection', async (req, res) => {
 app.delete('/api/:collection/:id', async (req, res) => {
   try {
     const { collection, id } = req.params;
-    const result = await db.collection(collection).deleteOne({ id });
+    const { ObjectId } = await import('mongodb');
+    
+    // First try to delete by _id (MongoDB's default)
+    let result = await db.collection(collection).deleteOne({ _id: new ObjectId(id) });
+    
+    // If no document was deleted, try with id field (for backward compatibility)
+    if (result.deletedCount === 0) {
+      result = await db.collection(collection).deleteOne({ id });
+    }
+    
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, error: 'Document not found' });
+    }
+    
     res.json({ success: true, result });
   } catch (error) {
+    console.error('Error deleting document:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -422,6 +446,72 @@ app.delete('/api/products/:id', async (req, res) => {
   } catch (error) {
     console.error('Failed to delete product:', error);
     res.status(500).json({ error: 'Failed to delete product' });
+  }
+});
+
+// TEMPORARY: Clear all clients (for testing only)
+app.delete('/api/clear-clients', async (req, res) => {
+  try {
+    const clientsCollection = db.collection('clients');
+    const result = await clientsCollection.deleteMany({});
+    console.log('Cleared all clients:', result);
+    res.json({ success: true, deletedCount: result.deletedCount });
+  } catch (error) {
+    console.error('Failed to clear clients:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Client deletion endpoint - FORCE VERSION
+app.delete('/api/clients/:id', async (req, res) => {
+  try {
+    const clientsCollection = db.collection('clients');
+    const clientId = req.params.id;
+    console.log('🚨 ATTEMPTING TO DELETE CLIENT WITH ID:', clientId);
+    
+    // Try to delete by ID first
+    let deleteResult = await clientsCollection.deleteOne({ id: clientId });
+    
+    // If not found by id, try by _id
+    if (deleteResult.deletedCount === 0) {
+      deleteResult = await clientsCollection.deleteOne({ _id: clientId });
+    }
+    
+    // If still not found, try direct string match
+    if (deleteResult.deletedCount === 0) {
+      const allClients = await clientsCollection.find({}).toArray();
+      console.log('All clients in DB:', allClients);
+      
+      // Try to find by string comparison
+      const clientToDelete = allClients.find(c => 
+        c.id?.toString() === clientId.toString() || 
+        c._id?.toString() === clientId.toString()
+      );
+      
+      if (clientToDelete?._id) {
+        console.log('Found client by string comparison, deleting by _id:', clientToDelete._id);
+        deleteResult = await clientsCollection.deleteOne({ _id: clientToDelete._id });
+      }
+    }
+    
+    if (deleteResult.deletedCount > 0) {
+      console.log('✅ Client deleted successfully');
+      return res.json({ success: true, message: 'Client deleted successfully' });
+    }
+    
+    console.log('❌ Failed to delete client - no matching document found');
+    return res.status(404).json({ 
+      success: false, 
+      error: 'Client not found or could not be deleted' 
+    });
+    
+  } catch (error) {
+    console.error('🔥 ERROR deleting client:', error);
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Server error while deleting client',
+      details: error.message 
+    });
   }
 });
 
