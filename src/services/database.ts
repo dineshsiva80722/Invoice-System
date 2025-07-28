@@ -526,12 +526,12 @@ class DatabaseService {
   private constructor() {
     // Use Vite's environment variables
     this.config = {
-      apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+      apiUrl: import.meta.env.VITE_API_URL || '/api'
     };
     
-    // For deployment, handle relative URLs
-    if (typeof window !== 'undefined' && this.config.apiUrl.startsWith('/')) {
-      this.config.apiUrl = window.location.origin + this.config.apiUrl;
+    // In development, use the proxy. In production, use full URL
+    if (import.meta.env.DEV && this.config.apiUrl.startsWith('http://localhost:3001')) {
+      this.config.apiUrl = '/api';
     }
   }
 
