@@ -293,13 +293,13 @@ export default function InvoiceList() {
                   </td>
                   <td className="py-4 px-6">
                     <div className="flex items-center space-x-2">
-                      <button 
+                      {/* <button 
                         onClick={() => handlePreviewInvoice(invoice)}
                         className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
                         title="Preview"
                       >
                         <Eye className="w-4 h-4" />
-                      </button>
+                      </button> */}
                       <button 
                         onClick={() => handleEditInvoice(invoice)}
                         className="p-2 text-gray-400 hover:text-emerald-600 transition-colors"
