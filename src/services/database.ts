@@ -10,16 +10,22 @@ class DatabaseService {
   private static instance: DatabaseService;
 
   private constructor() {
-    // Use Vite's environment variables
-    this.config = {
-      apiUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'
-    };
+    // Default to development API URL
+    let apiUrl = 'http://localhost:3001/api';
     
-    // For Vercel deployment, we need to use relative URLs
-    if (typeof window !== 'undefined' && this.config.apiUrl.startsWith('/')) {
-      this.config.apiUrl = window.location.origin + this.config.apiUrl;
+    // Use Vite's environment variables if available
+    if (import.meta.env.VITE_API_BASE_URL) {
+      apiUrl = import.meta.env.VITE_API_BASE_URL;
+      // For production (Vercel), we might get a relative URL
+      if (apiUrl.startsWith('/')) {
+        apiUrl = window.location.origin + apiUrl;
+      }
+    } else if (import.meta.env.PROD) {
+      // In production, default to current origin + /api
+      apiUrl = window.location.origin + '/api';
     }
     
+    this.config = { apiUrl };
     console.log('API Base URL:', this.config.apiUrl);
   }
 
