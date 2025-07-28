@@ -12,9 +12,9 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// MongoDB configuration - Using direct connection to MongoDB Atlas
-const MONGODB_URI = 'mongodb+srv://dezprox25:catlover6208@cluster0.jbcrgrb.mongodb.net/invoicepro?retryWrites=true&w=majority&appName=Cluster0';
-const DB_NAME = 'invoicepro';
+// MongoDB configuration from environment variables
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://dezprox25:catlover6208@cluster0.jbcrgrb.mongodb.net/invoicepro?retryWrites=true&w=majority&appName=Cluster0';
+const DB_NAME = process.env.DB_NAME || 'invoicepro';
 let db;
 let client;
 

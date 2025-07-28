@@ -8,8 +8,6 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "server": "cd server && pnpm dev",
-    "dev:frontend": "vite",
-    "dev:backend": "cd server && pnpm dev",
     "dev": "vite"
   },
   "dependencies": {
