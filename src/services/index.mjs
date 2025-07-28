@@ -234,9 +234,8 @@ async function createCollections() {
 
 // Test connection
 app.get('/api/test', async (req, res) => {
-  let db;
   try {
-    db = await connectToMongoDB();
+    // db is already connected and available in the outer scope
     const collections = await db.listCollections().toArray();
     res.json({ 
       success: true, 
