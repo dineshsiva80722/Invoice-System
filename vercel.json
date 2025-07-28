@@ -7,6 +7,10 @@
       "config": {
         "distDir": "dist"
       }
+    },
+    {
+      "src": "api/index.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -15,8 +19,14 @@
       "dest": "/api"
     },
     {
-      "src": "/(.*)",
+      "src": "^/(.*)$",
       "dest": "/index.html"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
