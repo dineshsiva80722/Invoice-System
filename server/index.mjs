@@ -234,11 +234,9 @@ async function createCollections() {
 
 // Test connection
 app.get('/api/test', async (req, res) => {
+  let db;
   try {
-    if (!db) {
-      return res.status(500).json({ success: false, error: 'Database not connected' });
-    }
-    
+    db = await connectToMongoDB();
     const collections = await db.listCollections().toArray();
     res.json({ 
       success: true, 
@@ -247,7 +245,12 @@ app.get('/api/test', async (req, res) => {
       message: 'Connected to MongoDB Atlas successfully!'
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Test connection error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to connect to MongoDB',
+      details: error.message 
+    });
   }
 });
 
@@ -381,13 +384,18 @@ app.get('/dashboard/stats', async (req, res) => {
 
 // Clients API endpoints
 app.get('/api/clients', async (req, res) => {
+  let db;
   try {
     const clientsCollection = db.collection('clients');
     const clients = await clientsCollection.find().toArray();
     res.json(clients);
   } catch (error) {
-    console.error('Failed to get clients:', error);
-    res.status(500).json({ error: 'Failed to get clients' });
+    console.error('Error fetching clients:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to fetch clients',
+      details: error.message 
+    });
   }
 });
 
@@ -528,11 +536,17 @@ app.get('/api/invoices', async (req, res) => {
 });
 
 app.post('/api/invoices', async (req, res) => {
+  let db;
   try {
+    db = await connectToMongoDB();
     const invoicesCollection = db.collection('invoices');
     const invoice = req.body;
-    await invoicesCollection.insertOne(invoice);
-    res.json(invoice);
+    const result = await invoicesCollection.insertOne(invoice);
+    res.status(201).json({ 
+      success: true, 
+      message: 'Invoice created successfully', 
+      data: { ...invoice, _id: result.insertedId } 
+    });
   } catch (error) {
     console.error('Failed to save invoice:', error);
     res.status(500).json({ error: 'Failed to save invoice' });
@@ -540,7 +554,9 @@ app.post('/api/invoices', async (req, res) => {
 });
 
 app.delete('/api/invoices/:id', async (req, res) => {
+  let db;
   try {
+    db = await connectToMongoDB();
     const invoicesCollection = db.collection('invoices');
     const result = await invoicesCollection.deleteOne({ id: req.params.id });
     res.json({ success: result.deletedCount > 0 });

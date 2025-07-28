@@ -10,7 +10,7 @@
     "server": "cd server && pnpm dev",
     "dev:frontend": "vite",
     "dev:backend": "cd server && pnpm dev",
-    "dev": "concurrently -n \"FRONTEND,BACKEND\" -c \"bgBlue.bold,bgGreen.bold\" \"npm run dev:frontend\" \"npm run dev:backend\""
+    "dev": "vite"
   },
   "dependencies": {
     "concurrently": "^8.2.2",
