@@ -76,7 +76,7 @@ export default function ClientList() {
     
     try {
       setIsDeleting(true);
-      const clientId = clientToDelete._id;  
+      const clientId = clientToDelete.id;  
       if (!clientId) {
         console.error('Cannot delete client: No ID found', clientToDelete);
         return;

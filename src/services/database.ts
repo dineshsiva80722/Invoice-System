@@ -14,7 +14,7 @@
 //     this.config = {
 //       apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 //     };
-    
+
 //     // For Vercel deployment, we need to use relative URLs
 //     if (typeof window !== 'undefined' && this.config.apiUrl.startsWith('/')) {
 //       this.config.apiUrl = window.location.origin + this.config.apiUrl;
@@ -38,13 +38,13 @@
 //   async connect(): Promise<boolean> {
 //     try {
 //       console.log('Connecting to MongoDB Atlas...');
-      
+
 //       // Test the backend API connection
 //       const response = await fetch(`${this.config.apiUrl}/test`);
 //       if (!response.ok) throw new Error('API connection failed');
-      
+
 //       const result = await response.json();
-      
+
 //       if (result.success) {
 //         this.isConnected = true;
 //         console.log('Successfully connected to MongoDB Atlas!');
@@ -52,7 +52,7 @@
 //         console.log('Collections:', result.collections);
 //         return true;
 //       }
-      
+
 //       throw new Error(result.error || 'Connection failed');
 //     } catch (error) {
 //       console.error('MongoDB Atlas connection failed:', error);
@@ -82,10 +82,10 @@
 //         // Check if response is JSON
 //         const contentType = response.headers.get('content-type');
 //         const isJson = contentType?.includes('application/json');
-        
+
 //         if (!response.ok) {
 //           let errorMessage = `HTTP error! status: ${response.status} - ${response.statusText}`;
-          
+
 //           try {
 //             // Try to get error message from response
 //             const errorData = isJson ? await response.json() : await response.text();
@@ -99,21 +99,21 @@
 //           } catch (e) {
 //             console.error('Error parsing error response:', e);
 //           }
-          
+
 //           throw new Error(errorMessage);
 //         }
-        
+
 //         // If successful, parse response
 //         try {
 //           const data = isJson ? await response.json() : await response.text();
-          
+
 //           if (isJson && data && typeof data === 'object' && 'success' in data) {
 //             if (!data.success) {
 //               throw new Error(data.error || 'API request failed');
 //             }
 //             return data.data;
 //           }
-          
+
 //           // If we get here, the response doesn't match our expected format
 //           return data as T;
 //         } catch (e) {
@@ -123,19 +123,19 @@
 //       } catch (error) {
 //         retries++;
 //         lastError = error instanceof Error ? error : new Error(String(error));
-        
+
 //         if (retries >= maxRetries) {
 //           console.error(`Failed to fetch ${url} after ${maxRetries} retries:`, lastError);
 //           throw new Error(`Failed to complete request after ${maxRetries} retries: ${lastError.message}`);
 //         }
-        
+
 //         // Exponential backoff
 //         const delay = 1000 * Math.pow(2, retries);
 //         console.log(`Request failed, retrying in ${delay}ms...`, error);
 //         await new Promise(resolve => setTimeout(resolve, delay));
 //       }
 //     }
-    
+
 //     throw lastError || new Error('Max retries exceeded');
 //   }
 
@@ -177,15 +177,15 @@
 //       const paidInvoices = invoices.filter(inv => inv.status === 'paid').length;
 //       const pendingInvoices = invoices.filter(inv => inv.status === 'sent').length;
 //       const overdueInvoices = invoices.filter(inv => inv.status === 'overdue').length;
-      
+
 //       const totalRevenue = invoices
 //         .filter(inv => inv.status === 'paid')
 //         .reduce((sum, inv) => sum + (inv.total || 0), 0);
-        
+
 //       const outstandingAmount = invoices
 //         .filter(inv => ['sent', 'overdue'].includes(inv.status))
 //         .reduce((sum, inv) => sum + (inv.total || 0), 0);
-        
+
 //       const overdueAmount = invoices
 //         .filter(inv => inv.status === 'overdue')
 //         .reduce((sum, inv) => sum + (inv.total || 0), 0);
@@ -237,14 +237,14 @@
 //     try {
 //       console.log('Fetching clients from:', `${this.config.apiUrl}/clients`);
 //       const response = await fetch(`${this.config.apiUrl}/clients`);
-      
+
 //       if (!response.ok) {
 //         throw new Error(`HTTP error! status: ${response.status}`);
 //       }
-      
+
 //       const result = await response.json();
 //       console.log('Raw clients response:', result);
-      
+
 //       // Handle different response formats
 //       if (Array.isArray(result)) {
 //         return result;
@@ -253,7 +253,7 @@
 //       } else if (result && result.success && Array.isArray(result.data)) {
 //         return result.data;
 //       }
-      
+
 //       console.error('Unexpected clients response format:', result);
 //       return [];
 //     } catch (error) {
@@ -265,7 +265,7 @@
 //   async deleteClient(clientId: string): Promise<boolean> {
 //     try {
 //       console.log(`Attempting to delete client with ID: ${clientId}`);
-      
+
 //       const response = await fetch(
 //         `${this.config.apiUrl}/clients/${clientId}`, 
 //         {
@@ -275,10 +275,10 @@
 //           },
 //         }
 //       );
-      
+
 //       const result = await response.json();
 //       console.log('Delete client response:', result);
-      
+
 //       // Handle different response formats
 //       if (result && result.success === true) {
 //         console.log('Client deleted successfully');
@@ -287,16 +287,16 @@
 //         console.error('Server reported failure:', result.error || 'No error message provided');
 //         return false;
 //       }
-      
+
 //       // Fallback for different response formats
 //       if (response.ok) {
 //         console.log('Client deleted successfully (fallback check)');
 //         return true;
 //       }
-      
+
 //       console.error('Unexpected response format:', result);
 //       return false;
-      
+
 //     } catch (error) {
 //       console.error('Failed to delete client:', error);
 //       if (error instanceof Error) {
@@ -376,9 +376,9 @@
 //     if (!id) {
 //       throw new Error('Invoice ID is required for update');
 //     }
-    
+
 //     console.log(`Attempting to update invoice ${id} with:`, updates);
-    
+
 //     try {
 //       // Try to update the invoice directly
 //       const response = await this.fetchWithRetry<Invoice>(`${this.config.apiUrl}/invoices/${id}`, {
@@ -504,7 +504,6 @@
 // export const databaseService = DatabaseService.getInstance();
 // export type { DatabaseConfig };
 
-
 import { Client, Product, Invoice, Payment } from '../types';
 
 interface DatabaseConfig {
@@ -528,7 +527,7 @@ class DatabaseService {
     this.config = {
       apiUrl: import.meta.env.VITE_API_URL || '/api'
     };
-    
+
     // Initialize localStorage fallback
     this.initializeLocalStorage();
   }
@@ -625,7 +624,20 @@ class DatabaseService {
               id: `cl-${Date.now()}-1`,
               name: 'John Smith',
               email: 'john@techcorp.com',
-              company: 'TechCorp Solutions'
+              phone: '+1 (555) 123-4567',
+              company: 'TechCorp Solutions',
+              address: {
+                street: '123 Business Ave',
+                city: 'San Francisco',
+                state: 'CA',
+                zipCode: '94107',
+                country: 'USA'
+              },
+              taxNumber: 'TAX-123456',
+              paymentTerms: 30,
+              creditLimit: 50000,
+              totalOutstanding: 15750,
+              createdAt: new Date().toISOString().split('T')[0]
             },
             date: new Date().toISOString().split('T')[0],
             dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -655,7 +667,18 @@ class DatabaseService {
               id: `cl-${Date.now()}-2`,
               name: 'Sarah Johnson',
               email: 'sarah@designstudio.com',
-              company: 'Creative Design Studio'
+              company: 'Creative Design Studio',
+              address: {
+                street: '456 Design Street',
+                city: 'New York',
+                state: 'NY',
+                zipCode: '10001',
+                country: 'USA'
+              },
+              paymentTerms: 30,
+              creditLimit: 30000,
+              totalOutstanding: 8680,
+              createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
             },
             date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             dueDate: new Date().toISOString().split('T')[0],
@@ -701,7 +724,7 @@ class DatabaseService {
   async connect(): Promise<boolean> {
     try {
       console.log('🔄 Attempting to connect to MongoDB Atlas...');
-      
+
       const response = await fetch(`${this.config.apiUrl}/test`, {
         method: 'GET',
         headers: {
@@ -709,11 +732,11 @@ class DatabaseService {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (!response.ok) throw new Error('API connection failed');
-      
+
       const result: ApiResponse = await response.json();
-      
+
       if (result.success) {
         this.isConnected = true;
         this.useLocalStorage = false;
@@ -722,7 +745,7 @@ class DatabaseService {
         console.log('Collections:', result.data?.collections);
         return true;
       }
-      
+
       throw new Error(result.error || 'Connection failed');
     } catch (error) {
       console.warn('⚠️ MongoDB Atlas connection failed, falling back to localStorage:', error);
@@ -756,7 +779,7 @@ class DatabaseService {
 
   // Helper function for API requests with localStorage fallback
   private async fetchWithFallback<T>(
-    url: string, 
+    url: string,
     options: RequestInit = {},
     fallbackFn: () => Promise<T>
   ): Promise<T> {
@@ -777,16 +800,16 @@ class DatabaseService {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data: ApiResponse<T> = await response.json();
-      
+
       if (data && typeof data === 'object' && 'success' in data) {
         if (!data.success) {
           throw new Error(data.error || 'API request failed');
         }
         return data.data as T;
       }
-      
+
       return data as T;
     } catch (error) {
       console.warn('API request failed, using localStorage fallback:', error);
@@ -841,15 +864,15 @@ class DatabaseService {
         const paidInvoices = invoices.filter(inv => inv.status === 'paid').length;
         const pendingInvoices = invoices.filter(inv => inv.status === 'sent').length;
         const overdueInvoices = invoices.filter(inv => inv.status === 'overdue').length;
-        
+
         const totalRevenue = invoices
           .filter(inv => inv.status === 'paid')
           .reduce((sum, inv) => sum + (inv.total || 0), 0);
-          
+
         const outstandingAmount = invoices
           .filter(inv => ['sent', 'overdue'].includes(inv.status))
           .reduce((sum, inv) => sum + (inv.total || 0), 0);
-          
+
         const overdueAmount = invoices
           .filter(inv => inv.status === 'overdue')
           .reduce((sum, inv) => sum + (inv.total || 0), 0);
@@ -884,7 +907,7 @@ class DatabaseService {
           id: client.id || `cl-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           createdAt: client.createdAt || new Date().toISOString().split('T')[0]
         } as Client;
-        
+
         clients.push(newClient);
         this.saveToLocalStorage('invoicepro_clients', clients);
         return newClient;
@@ -935,7 +958,7 @@ class DatabaseService {
           ...product,
           id: product.id || `pr-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
         } as Product;
-        
+
         products.push(newProduct);
         this.saveToLocalStorage('invoicepro_products', products);
         return newProduct;
@@ -988,7 +1011,7 @@ class DatabaseService {
           createdAt: invoice.createdAt || new Date().toISOString().split('T')[0],
           updatedAt: new Date().toISOString().split('T')[0]
         } as Invoice;
-        
+
         invoices.push(newInvoice);
         this.saveToLocalStorage('invoicepro_invoices', invoices);
         return newInvoice;
@@ -1022,17 +1045,17 @@ class DatabaseService {
         // localStorage fallback
         const invoices = this.getFromLocalStorage<Invoice>('invoicepro_invoices');
         const invoiceIndex = invoices.findIndex(inv => inv.id === id);
-        
+
         if (invoiceIndex === -1) {
           throw new Error(`Cannot update: Invoice with ID ${id} does not exist`);
         }
-        
+
         const updatedInvoice = {
           ...invoices[invoiceIndex],
           ...updates,
           updatedAt: new Date().toISOString().split('T')[0]
         };
-        
+
         invoices[invoiceIndex] = updatedInvoice;
         this.saveToLocalStorage('invoicepro_invoices', invoices);
         return updatedInvoice;
@@ -1077,7 +1100,7 @@ class DatabaseService {
           ...payment,
           id: payment.id || `pay-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
         } as Payment;
-        
+
         payments.push(newPayment);
         this.saveToLocalStorage('invoicepro_payments', payments);
         return newPayment;
@@ -1127,7 +1150,7 @@ class DatabaseService {
     try {
       const response = await fetch(`${this.config.apiUrl}/connection`);
       if (!response.ok) throw new Error('Connection check failed');
-      
+
       const data = await response.json();
       return {
         ...data,
